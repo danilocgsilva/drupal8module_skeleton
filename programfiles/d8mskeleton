@@ -1,0 +1,138 @@
+#!/bin/bash
+
+## Functions definitions
+
+## Generic asking function
+# $1: The question title
+# $2: The variable to be filled based on answer.
+ask () {
+
+    # Self validation
+    if [ -z "$1" ]; then
+        echo When using asking function, provides the first argument to be the question title.
+        echo exiting...
+        exit 1
+    fi
+    if [ -z $2 ]; then
+        echo When using asking function, provides the second argument to be the variable to be filled.
+        echo exiting...
+        exit 1
+    fi
+
+    # Function execution
+    read -p "$1" $2
+}
+
+## Generic asking function that does not allows blank answers
+# $1: The question title
+# $2: The variable to be filled based on answer.
+# $3: The returning string, case the user does not provides any value.
+ask_non_blank_answer () {
+
+    ## Self validation
+    if [ -z "$3" ]; then
+        echo When using the ask_non_blank_answer function, does not forget to provides the third argument to be the string to the echoed when nothing is provided by the user
+        echo exiting...
+        exit 1
+    fi
+
+    # Function execution
+    ask "$1" $2
+    if [[ -z ${!2} ]]; then
+        echo "$3"
+        ask_non_blank_answer "$1" $2 "$3"
+        return
+    fi
+}
+
+
+## Generic function to ask for answer that does not have blank spaces, to input to the machine name
+# $1: The question title
+# $2: The variable to be filled based on answer.
+# $3: The title to be outputed if the user does not provides nothing as argument.
+ask_non_blank_spaces () {
+    ask_non_blank_answer "$1" $2 "$3"
+    if [[ "${!2}" =~ " " ]]; then
+        echo "In the machine name, blank values are not allowed."
+        ask_non_blank_spaces "$1" $2 "$3"
+        return
+    fi 
+}
+
+## Function to write to the file system at once, creating the folder, creating the yml file and putting content inside it.
+# $1: The module's machine name
+# $2: The module's human readable name
+# $3: The module's description
+# $4: The module's package (optional)
+# $5: The module's version (optional)
+fs_generator () {
+    # Self function validation
+    if [ -z $1 ]; then
+        echo When using the fs_generator function, does not to forget to put the first argument to be the machine_readable module\'s name.
+        echo exiting...
+        exit 1
+    fi
+    if [ -z "$2" ]; then
+        echo When using the fs_generator function, does not forget to put the second argument to be the human readable module\'s name.
+        echo exiting...
+        exit 1
+    fi
+    if [ -z "$3" ]; then
+        echo When using the fs_generator function, does not forget to put the third argument to be the module\'s description.
+        echo exiting...
+        exit 1
+    fi
+
+    ## Function execution
+
+    # Inteligible variables name convertions.
+    machine_readable_name=$1
+
+    human_readable_name="$2"
+
+    module_description="$3"
+
+    if ! [ -z "$4" ]; then
+        modules_package="$4"
+    fi
+
+    if ! [ -z $5 ]; then
+        modules_version=$5
+    else
+        modules_version=1.0
+    fi
+
+    file_yml_name=$machine_readable_name.info.yml
+
+
+    # File system writing
+    mkdir $machine_readable_name
+    cd $machine_readable_name
+
+    echo name: $human_readable_name >> $file_yml_name
+
+    echo description: "$module_description" >> $file_yml_name
+
+    if ! [ -z "$modules_package" ]; then
+        echo package: "$modules_package" >> $file_yml_name
+    fi
+
+    echo type: module >> $file_yml_name
+
+    if [ -z $modules_version ]; then
+       modules_version=1.0
+    fi
+    echo version: $modules_version >> $file_yml_name
+
+    echo core: 8.x >> $file_yml_name
+}
+
+# The script execution:
+echo Drupal 8 module skeleton\'s generator...
+ask_non_blank_answer "Provides the human readable module name: " human_readable_module_name "You did not provides the Human Readable module's name"
+ask_non_blank_spaces "Provides the machine module name: " machine_module_name "You did not provides the module's machine name."
+ask_non_blank_answer "Provides the module's description: " modules_description "You did not provides the module's description."
+ask "Provides the module package (optional): " modules_package
+ask "Provides the module version (option, sets to 1.0 if not provided): " modules_version
+
+fs_generator $machine_module_name "$human_readable_module_name" "$modules_description" "$modules_package" $modules_version
